@@ -1,12 +1,14 @@
-import pandas as pd 
-import numpy as np 
-import pickle as pk 
 import streamlit as st
+import pickle as pk
+import numpy as np
+import pandas as pd
+import xgboost as xgb
 
-model = pk.load(open('model.pkl','rb'))
+# Load the trained model from pickle
+model = pk.load(open('xgb_saved.pkl','rb'))
 
-st.header('Car Price Prediction of AI Model')
-
+# Streamlit app title
+st.title("Car Price Prediction")
 cars_data = pd.read_csv('Cardetails.csv')
 
 def get_brand_name(car_name):
@@ -14,38 +16,40 @@ def get_brand_name(car_name):
     return car_name.strip()
 cars_data['name'] = cars_data['name'].apply(get_brand_name)
 
-name = st.selectbox('Select Car Brand', cars_data['name'].unique())
-year = st.slider('Car Manufactured Year', 1994,2024)
-km_driven = st.slider('No of kms Driven', 11,200000)
-fuel = st.selectbox('Fuel type', cars_data['fuel'].unique())
-seller_type = st.selectbox('Seller  type', cars_data['seller_type'].unique())
-transmission = st.selectbox('Transmission type', cars_data['transmission'].unique())
-owner = st.selectbox('Seller  type', cars_data['owner'].unique())
-mileage = st.slider('Car Mileage', 10,40)
-engine = st.slider('Engine CC', 700,5000)
-max_power = st.slider('Max Power', 0,200)
-seats = st.slider('No of Seats', 5,10)
+# User input fields
+name = st.selectbox("Name of the car", ['Ford', 'City', 'Mercides', 'toyata', 'cultus'])
+year = st.number_input("Year of Manufacture", min_value=1900, max_value=2024, value=2015)
+km_driven = st.number_input("Kilometers Driven", min_value=0, max_value=1000000, value=50000)
+fuel = st.selectbox("Fuel Type", ['Petrol', 'Diesel', 'CNG', 'LPG', 'Electric'])
+seller_type = st.selectbox("Seller Type", ['Individual', 'Dealer', 'Trustmark Dealer'])
+transmission = st.selectbox("Transmission Type", ['Manual', 'Automatic'])
+owner = st.selectbox("Owner Type", ['First Owner', 'Second Owner', 'Third Owner', 'Fourth & Above Owner', 'Test Drive Car'])
+engine = st.number_input("Engine Capacity (CC)", min_value=500, max_value=5000, value=1500)
+mileage = st.number_input("Mileage (kmpl)", min_value=0.0, max_value=50.0, value=20.0)
+max_power = st.number_input("Max power  (CC)", min_value=500, max_value=5000, value=1500)
+seats = st.number_input("Seats", min_value=0, max_value=7, value=7)
 
 
-if st.button("Predict"):
-    input_data_model = pd.DataFrame(
-    [[name,year,km_driven,fuel,seller_type,transmission,owner,mileage,engine,max_power,seats]],
-    columns=['name','year','km_driven','fuel','seller_type','transmission','owner','mileage','engine','max_power','seats'])
-    
-    input_data_model['owner'].replace(['First Owner', 'Second Owner', 'Third Owner',
-       'Fourth & Above Owner', 'Test Drive Car'],
-                           [1,2,3,4,5], inplace=True)
-    input_data_model['fuel'].replace(['Diesel', 'Petrol', 'LPG', 'CNG'],[1,2,3,4], inplace=True)
-    input_data_model['seller_type'].replace(['Individual', 'Dealer', 'Trustmark Dealer'],[1,2,3], inplace=True)
-    input_data_model['transmission'].replace(['Manual', 'Automatic'],[1,2], inplace=True)
-    input_data_model['name'].replace(['Maruti', 'Skoda', 'Honda', 'Hyundai', 'Toyota', 'Ford', 'Renault',
-       'Mahindra', 'Tata', 'Chevrolet', 'Datsun', 'Jeep', 'Mercedes-Benz',
-       'Mitsubishi', 'Audi', 'Volkswagen', 'BMW', 'Nissan', 'Lexus',
-       'Jaguar', 'Land', 'MG', 'Volvo', 'Daewoo', 'Kia', 'Fiat', 'Force',
-       'Ambassador', 'Ashok', 'Isuzu', 'Opel'],
-                          [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31]
-                          ,inplace=True)
+# Create input dataframe
+input_data = {
+    'name':name,
+    'year':year,
+    'km_driven':km_driven,
+    'fuel':fuel,
+    'seller_type':seller_type,
+    'transmission':transmission,
+    'owner':owner,
+    'engine':engine,
+    'mileage':mileage,
+    'max_power':max_power,
+    'seats':seats,
+}
 
-    car_price = model.predict(input_data_model)
+input_df = pd.DataFrame([input_data])
+input_df = pd.get_dummies(input_df, drop_first=True)
 
-    st.markdown('Car Price is going to be '+ str(car_price[0]))
+
+# Make a prediction
+if st.button('Predict'):
+    prediction = model.predict(input_df)
+    st.write(f"The estimated selling price is: ₹{prediction[0]:,.2f}")
